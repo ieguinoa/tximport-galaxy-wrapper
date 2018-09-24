@@ -1,0 +1,68 @@
+<tool name="tximport" id="tximport" version="0.1">
+  <description> Summarize transcript-level estimates for gene-level analysis </description>
+  <command>
+ <![CDATA[
+       #if $refGffSource.gff_source == "history":
+            python $__tool_directory__/tximport.py --base_dir $__tool_directory__ --gff_file $refGffSource.ownFile 
+       #else:
+            python $__tool_directory__/tximport.py --base_dir $__tool_directory__ --tx2gene $refGffSource.tx2gene.fields.path
+       #end if
+       --sample '${input_sample}'       
+       --out_file '${gene_level_values}' 
+
+       
+  ]]>
+  </command>
+  <requirements>
+    <requirement type="package">tximport</requirement> 
+    <!--<requirement type="package">gffutils</requirement>-->
+    <!--<requirement type="package" version="2">python</requirement>-->
+  </requirements>
+  <inputs>
+   <conditional name="refGffSource">
+            <param name="gff_source" type="select" label="Select a GFF from your history or use a built-in file?">
+                <option value="built-in" selected="True">Use a built-in file</option>
+                <option value="history" >Use one from the history</option>
+            </param>
+            <when value="built-in">
+                <param name="tx2gene" type="select" label="Select a genome build" help="If the genome build of your interest is not listed contact your Galaxy admin">
+                    <options from_data_table="tx2gene">
+                        <filter type="sort_by" column="1"/>
+                        <validator type="no_options" message="No files are available for the selected input dataset"/>
+                    </options>
+                </param>
+            </when>  
+            <when value="history">
+                <param name="ownFile" type="data" format="gff" metadata_name="dbkey" label="Select your GFF file"  />
+            </when>
+    </conditional>
+    <param name="input_sample" format="tabular" type="data" label="Input sample" help="Salmon output *.quant file" />
+
+<!--   <param name="input_samples" format="tabular" type="data_collection" collection_type="list" label="Samples list" help="List of samples" />
+-->
+   
+ <!--  
+    <param name="out_mode" type="boolean" truevalue='merge' falsevalue='individual' checked="false" label="Merge output into one file with multiple columns" help=""/>
+ -->
+  </inputs>
+  <outputs>
+   <data format="tabular" name="gene_level_values" label="Gene level summarization on ${on_string}"/>
+   <!--     <collection name="gene_level_values" type="list" label="${input_samples}_gene_level_sum" structured_like="input_samples" inherit_format="true"/>
+   <data format="tabular" name="gene_level_values" label="input_samples2${input_samples.index(0)}.input_file" />
+   <data format="tabular" name="gene_level_values_2" label="GENE_LEVEL_2.csv" >
+    </data>
+   <data format="tabular" name="gene_level_values_3" label="GENE_LEVEL_3.csv" >
+       <filter> len(input_samples) > 2</filter>
+    </data>
+      
+-->
+   </outputs>
+  <help>
+
+.. class:: infomark
+
+Current version only works in 'merge' mode: A single table of gene summarizations is generated with one column for each sample file.
+Take into account that DEseq2 package in Galaxy requires one table per sample. 
+</help>
+</tool>
+
