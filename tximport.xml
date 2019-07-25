@@ -14,27 +14,52 @@
   ]]>
   </command>
   <requirements>
-    <requirement type="package">tximport</requirement> 
-    <!--<requirement type="package">gffutils</requirement>-->
-    <!--<requirement type="package" version="2">python</requirement>-->
+    <requirement type="package">bioconductor-tximport</requirement> 
   </requirements>
   <inputs>
-   <conditional name="refGffSource">
-            <param name="gff_source" type="select" label="Select a GFF from your history or use a built-in file?">
-                <option value="built-in" selected="True">Use a built-in file</option>
-                <option value="history" >Use one from the history</option>
-            </param>
-            <when value="built-in">
-                <param name="tx2gene" type="select" label="Select a genome build" help="If the genome build of your interest is not listed contact your Galaxy admin">
-                    <options from_data_table="tx2gene">
-                        <filter type="sort_by" column="1"/>
-                        <validator type="no_options" message="No files are available for the selected input dataset"/>
-                    </options>
+    <conditional name="inputSourceOptions">
+        <param name="inputSource" type ="select" label="Select the source of the quantification file"> 
+            <option value="none" selected="True">Custom format (specify the columns)</option>
+            <option value="salmon">Salmon</option>
+            <option value="sailfish">Sailfish</option>
+            <option value="alevin">Alevin</option>
+            <option value="kallisto">Kallisto</option>
+            <option value="rsem">RSEM</option>
+            <option value="stringtie">Stringtie</option>
+        </param>
+        <when value="none"> 
+            <param name="txIdCol" type="text" label="Name of the txID columns">
+            <param name="abundanceCol" type="text" label="Name of the abundance column">
+            <param name="countsCol" type="text" label="Name of the counts column">
+            <param name="lengthCol" type="text" label="Name of the length column">
+        </when>
+    </conditional> 
+    <conditional name="geneNameSourceOptions" >
+        <param name="geneNameSource" type="select" label="Is the gene name part of the counts file or will be obtained from an external file?">
+            <option value="externalFile" selected="True">Use an external file to map transcript to gene names</option>
+            <option value="geneNameColumnOption">Gene name is a column of the input file</option>
+        </param>
+        <when value="geneNameColumnOption"> 
+            <param name="geneIdCol" type="text" label="Name of the column containing the geneID">
+        </when>
+        <when value="externalFile">
+            <conditional name="refGffSource">
+                <param name="gff_source" type="select" label="Select a GFF from your history or use a built-in file?">
+                    <option value="built-in" selected="True">Use a built-in file</option>
+                    <option value="history" >Use one from the history</option>
                 </param>
-            </when>  
-            <when value="history">
-                <param name="ownFile" type="data" format="gff" metadata_name="dbkey" label="Select your GFF file"  />
-            </when>
+                <when value="built-in">
+                    <param name="tx2gene" type="select" label="Select a genome build" help="If the genome build of your interest is not listed contact your Galaxy admin">
+                        <options from_data_table="tx2gene">
+                            <filter type="sort_by" column="1"/>
+                            <validator type="no_options" message="No files are available for the selected input dataset"/>
+                        </options>
+                    </param>
+                </when>  
+                <when value="history">  <!-- SHOULD ADD OPTIONS TO SELECT THE INPUT TO BE THE TX2GENE TABLE OR A GFF -->
+                    <param name="ownFile" type="data" format="gff" metadata_name="dbkey" label="Select your GFF file"  />
+                </when>
+            </conditional>
     </conditional>
     <param name="input_sample" format="tabular" type="data" label="Input sample" help="Salmon output *.quant file" />
 

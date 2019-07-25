@@ -2,10 +2,8 @@
 # 1 = gene2tx_table
 # 2 = out_file
 # 3..n = sample files 
-#source("https://bioconductor.org/biocLite.R")
-#biocLite("tximport")
+
 library(tximport)
-#  table at/home/ieguinoa/tx2gene.csv
 args = commandArgs(trailingOnly=TRUE)
 #length(args)
 if (length(args) < 3) {
