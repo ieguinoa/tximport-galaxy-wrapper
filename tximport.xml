@@ -2,13 +2,41 @@
   <description> Summarize transcript-level estimates for gene-level analysis </description>
   <command>
  <![CDATA[
-       #if $refGffSource.gff_source == "history":
-            python $__tool_directory__/tximport.py --base_dir $__tool_directory__ --gff_file $refGffSource.ownFile 
-       #else:
-            python $__tool_directory__/tximport.py --base_dir $__tool_directory__ --tx2gene $refGffSource.tx2gene.fields.path
-       #end if
-       --sample '${input_sample}'       
-       --out_file '${gene_level_values}' 
+
+
+#if $geneNameSourceOptions.geneNameSource == 'externalFile':
+    #if $refGffSource.gff_source == 'history':
+        #if gffOrTx2gene.mappingFileOption == 'gff_gtf':
+            ln -s '$gffOrTx2gene.own_gff' mapping.gff &&
+        #else:
+            ln -s '$gffOrTx2gene.own_tx2gene' mapping.txt &&
+        #end if
+    #end if
+
+Rscript '${__tool_directory__}/tximport.R'
+    --base_dir $__tool_directory__
+    --format $inputSourceOptions.inputSource
+    #if $inputSourceOptions.inputSource == 'none':
+        --txIdCol $inputSourceOptions.txIdCol
+        --abundanceCol $inputSourceOptions.abundanceCol
+        --countsCol $inputSourceOptions.countsCol
+        --lengthCol $inputSourceOptions.lengthCol
+
+#if $geneNameSourceOptions.geneNameSource == 'geneNameColumnOption':
+    --geneIdCol $geneNameSourceOptions.geneIdCol
+#else
+    #if $refGffSource.gff_source == "history":
+        #if $gffOrTx2gene.mappingFileOption == 'tx2gene':
+            --tx2gene mapping.txt
+        #else
+            --gff_file mapping.gff
+        #endif
+    #else:
+        --tx2gene $refGffSource.tx2gene.fields.path
+    #end if
+--countsFromAbundance $countsFromAbundance
+--samples '${input_sample}'       
+--out_file '${gene_level_values}' 
 
        
   ]]>
@@ -19,8 +47,8 @@
   <inputs>
     <conditional name="inputSourceOptions">
         <param name="inputSource" type ="select" label="Select the source of the quantification file"> 
-            <option value="none" selected="True">Custom format (specify the columns)</option>
-            <option value="salmon">Salmon</option>
+            <option value="none">Custom format (specify the columns)</option>
+            <option value="salmon" selected="True">Salmon</option>
             <option value="sailfish">Sailfish</option>
             <option value="alevin">Alevin</option>
             <option value="kallisto">Kallisto</option>
@@ -28,44 +56,61 @@
             <option value="stringtie">Stringtie</option>
         </param>
         <when value="none"> 
-            <param name="txIdCol" type="text" label="Name of the txID columns">
-            <param name="abundanceCol" type="text" label="Name of the abundance column">
-            <param name="countsCol" type="text" label="Name of the counts column">
-            <param name="lengthCol" type="text" label="Name of the length column">
+            <param name="txIdCol" type="text" label="Name of the txID columns"/>
+            <param name="abundanceCol" type="text" label="Name of the abundance column"/>
+            <param name="countsCol" type="text" label="Name of the counts column"/>
+            <param name="lengthCol" type="text" label="Name of the length column"/>
         </when>
     </conditional> 
     <conditional name="geneNameSourceOptions" >
-        <param name="geneNameSource" type="select" label="Is the gene name part of the counts file or will be obtained from an external file?">
-            <option value="externalFile" selected="True">Use an external file to map transcript to gene names</option>
-            <option value="geneNameColumnOption">Gene name is a column of the input file</option>
+        <param name="geneNameSource" type="select" label="Is the geneID part of the counts file or will it be obtained from an external file?">
+            <option value="externalFile" selected="True">Use an external file to map transcriptIDs to geneIDs</option>
+            <option value="geneNameColumnOption">GeneID is a column of the input file(s)</option>
         </param>
         <when value="geneNameColumnOption"> 
-            <param name="geneIdCol" type="text" label="Name of the column containing the geneID">
+            <param name="geneIdCol" type="text" label="Name of the column containing the geneID"/>
         </when>
         <when value="externalFile">
             <conditional name="refGffSource">
-                <param name="gff_source" type="select" label="Select a GFF from your history or use a built-in file?">
+                <param name="gff_source" type="select" label="Will you provide a mapping file or use a built-in file?">
                     <option value="built-in" selected="True">Use a built-in file</option>
                     <option value="history" >Use one from the history</option>
                 </param>
                 <when value="built-in">
-                    <param name="tx2gene" type="select" label="Select a genome build" help="If the genome build of your interest is not listed contact your Galaxy admin">
-                        <options from_data_table="tx2gene">
+                    <param name="tx2gene" type="select" label="Select an annotation version" help="If the build of your interest is not listed contact your Galaxy admin">
+                        <options from_data_table="tx2gene_table">
                             <filter type="sort_by" column="1"/>
                             <validator type="no_options" message="No files are available for the selected input dataset"/>
                         </options>
                     </param>
                 </when>  
-                <when value="history">  <!-- SHOULD ADD OPTIONS TO SELECT THE INPUT TO BE THE TX2GENE TABLE OR A GFF -->
-                    <param name="ownFile" type="data" format="gff" metadata_name="dbkey" label="Select your GFF file"  />
+                <when value="history"> 
+                    <conditional name="gffOrTx2gene">
+                        <param name="mappingFileOption" type="select" label="Will you provide a tx2gene or a GFF/GTF file?">
+                            <option value="tx2gene" selected="True">TranscriptID to GeneID table</option>
+                            <option value="gff_gtf">GTF/GFF file</option>
+                        </param>
+                        <when value="gff_gtf">
+                            <param name="own_gff" type="data" format="gff" label="Select your GFF file"/>
+                        </when>
+                        <when value="tx2gene">
+                            <param name="own_tx2gene" type="data" format="tabular" label="Select your TranscriptID to GeneID table file"/>
+                        </when>  
+                    </conditional>
                 </when>
             </conditional>
+        </when>  
     </conditional>
+    <param name="output_type" type="select" label="Summarization using the abundance (TPM) values?">    
+        <option value="no">No</option>
+        <option value="scaledTPM">Scaled up to library size</option>
+        <option value="lengthScaledTPM">Scaled using the avg. transcript legth over samples and then the library size</option>
+        <option value="dtuScaledTPM">Scaled using the median transcript length among isoforms of a gene, and then the library size</option>
+    </param>
     <param name="input_sample" format="tabular" type="data" label="Input sample" help="Salmon output *.quant file" />
-
+       
 <!--   <param name="input_samples" format="tabular" type="data_collection" collection_type="list" label="Samples list" help="List of samples" />
 -->
-   
  <!--  
     <param name="out_mode" type="boolean" truevalue='merge' falsevalue='individual' checked="false" label="Merge output into one file with multiple columns" help=""/>
  -->
