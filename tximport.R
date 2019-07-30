@@ -1,17 +1,3 @@
-#if $geneNameSourceOptions.geneNameSource == 'externalFile':
-    #if $refGffSource.gff_source == 'history':
-        #if gffOrTx2gene.mappingFileOption == 'gff_gtf':
-            ln -s '$gffOrTx2gene.own_gff' mapping.gff &&
-        #else:
-            ln -s '$gffOrTx2gene.own_tx2gene' mapping.txt &&
-        #end if
-    #end if
-
-Rscript '${__tool_directory__}/tximport.R'
-    --base_dir $__tool_directory__
-    --input_type $inputSourceOptions.inputSource
-
-
 # setup R error handling to go to stderr
 options( show.error.messages=F, error = function () { cat( geterrmessage(), file=stderr() ); q( "no", 1, F ) } )
 
@@ -30,7 +16,7 @@ spec <- matrix(c(
   "help", "h", 0, "logical",
   "base_dir", "w", 1, "character",
   "out_file", "o", 1, "character",
-  "samples", "n", 1, "character",
+  "countsFiles", "n", 1, "character",
   "countsFromAbundance", "r", 1, "character",
   "format", "v", 1, "character",
   "gff_file", "H", 0, "logical",
@@ -44,7 +30,7 @@ spec <- matrix(c(
 
 opt <- getopt(spec)
 
-
+countsFiles
 
 # if help was asked for print a friendly message
 # and exit with a non-zero error code
@@ -59,9 +45,9 @@ if (!is.null(opt$help)) {
 library(tximport)
 args = commandArgs(trailingOnly=TRUE)
 #length(args)
-if (length(args) < 3) {
-  stop("At least 3 arguments must be supplied: gene2tx-Table, output-File, (samples)xN", call.=FALSE)
-}
+#if (length(args) < 3) {
+#  stop("At least 3 arguments must be supplied: gene2tx-Table, output-File, (samples)xN", call.=FALSE)
+#}
 
 
 
@@ -82,7 +68,7 @@ if (!is.null(gff_file)) {
 
 # parse sample list
 samples <- character()
-for (v in 3:length(args))
+for (v in 3:length(countsFiles))
   samples <- c(samples, args[v])
 
 names(samples) <- paste0("sample", 1:(length(args)-2))

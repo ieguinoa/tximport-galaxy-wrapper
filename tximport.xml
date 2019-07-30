@@ -5,13 +5,14 @@
 
 
 #if $geneNameSourceOptions.geneNameSource == 'externalFile':
-    #if $refGffSource.gff_source == 'history':
+    #if $geneNameSourceOptions.refGffSource.gff_source == 'history':
         #if gffOrTx2gene.mappingFileOption == 'gff_gtf':
             ln -s '$gffOrTx2gene.own_gff' mapping.gff &&
         #else:
             ln -s '$gffOrTx2gene.own_tx2gene' mapping.txt &&
         #end if
     #end if
+#end if
 
 Rscript '${__tool_directory__}/tximport.R'
     --base_dir $__tool_directory__
@@ -21,28 +22,37 @@ Rscript '${__tool_directory__}/tximport.R'
         --abundanceCol $inputSourceOptions.abundanceCol
         --countsCol $inputSourceOptions.countsCol
         --lengthCol $inputSourceOptions.lengthCol
-
-#if $geneNameSourceOptions.geneNameSource == 'geneNameColumnOption':
-    --geneIdCol $geneNameSourceOptions.geneIdCol
-#else
-    #if $refGffSource.gff_source == "history":
-        #if $gffOrTx2gene.mappingFileOption == 'tx2gene':
-            --tx2gene mapping.txt
-        #else
-            --gff_file mapping.gff
-        #endif
-    #else:
-        --tx2gene $refGffSource.tx2gene.fields.path
     #end if
---countsFromAbundance $countsFromAbundance
---samples '${input_sample}'       
---out_file '${gene_level_values}' 
+    #if $geneNameSourceOptions.geneNameSource == 'geneNameColumnOption':
+        --geneIdCol $geneNameSourceOptions.geneIdCol
+    #else
+        #if $geneNameSourceOptions.refGffSource.gff_source == "history":
+            #if $gffOrTx2gene.mappingFileOption == 'tx2gene':
+                --tx2gene mapping.txt
+            #else
+                --gff_file mapping.gff
+            #end if
+        #else:
+	--tx2gene $geneNameSourceOptions.refGffSource.tx2gene.fields.path
+        #end if
+    #end if
+    --countsFromAbundance $countsFromAbundance 
+    #set $filename_to_element_identifiers = {}
+    #set $count_files = list()
+    #for $file in $countsFile:
+        $count_files.append(str($file))
+        $filename_to_element_identifiers.__setitem__(os.path.basename(str($file)),  $file.element_identifier)
+    #end for
+    --countsFiles '${filename_to_element_identifiers}'
+    --out_file '${gene_level_values}' 
 
        
   ]]>
   </command>
   <requirements>
-    <requirement type="package">bioconductor-tximport</requirement> 
+	<requirement type="package">bioconductor-tximport</requirement> 
+	<requirement type="package" version="1.34.1">bioconductor-genomicfeatures</requirement>
+        <requirement type="package" version="1.20.2">r-getopt</requirement>
   </requirements>
   <inputs>
     <conditional name="inputSourceOptions">
@@ -101,14 +111,13 @@ Rscript '${__tool_directory__}/tximport.R'
             </conditional>
         </when>  
     </conditional>
-    <param name="output_type" type="select" label="Summarization using the abundance (TPM) values?">    
+    <param name="countsFromAbundance" type="select" label="Summarization using the abundance (TPM) values?">    
         <option value="no">No</option>
         <option value="scaledTPM">Scaled up to library size</option>
         <option value="lengthScaledTPM">Scaled using the avg. transcript legth over samples and then the library size</option>
         <option value="dtuScaledTPM">Scaled using the median transcript length among isoforms of a gene, and then the library size</option>
     </param>
-    <param name="input_sample" format="tabular" type="data" label="Input sample" help="Salmon output *.quant file" />
-       
+    <param name="countsFile" type="data" format="tabular" multiple="true" label="Counts file(s)"/>   
 <!--   <param name="input_samples" format="tabular" type="data_collection" collection_type="list" label="Samples list" help="List of samples" />
 -->
  <!--  
