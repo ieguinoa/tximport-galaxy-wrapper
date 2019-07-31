@@ -3,13 +3,13 @@
   <command>
  <![CDATA[
 
-
+#import json
 #if $geneNameSourceOptions.geneNameSource == 'externalFile':
     #if $geneNameSourceOptions.refGffSource.gff_source == 'history':
-        #if gffOrTx2gene.mappingFileOption == 'gff_gtf':
-            ln -s '$gffOrTx2gene.own_gff' mapping.gff &&
+        #if $geneNameSourceOptions.refGffSource.gffOrTx2gene.mappingFileOption == 'gff_gtf':
+            ln -s '$geneNameSourceOptions.refGffSource.gffOrTx2gene.own_gff' mapping.gff &&
         #else:
-            ln -s '$gffOrTx2gene.own_tx2gene' mapping.txt &&
+            ln -s '$geneNameSourceOptions.refGffSource.gffOrTx2gene.own_tx2gene' mapping.txt &&
         #end if
     #end if
 #end if
@@ -27,7 +27,7 @@ Rscript '${__tool_directory__}/tximport.R'
         --geneIdCol $geneNameSourceOptions.geneIdCol
     #else
         #if $geneNameSourceOptions.refGffSource.gff_source == "history":
-            #if $gffOrTx2gene.mappingFileOption == 'tx2gene':
+            #if $geneNameSourceOptions.refGffSource.gffOrTx2gene.mappingFileOption == 'tx2gene':
                 --tx2gene mapping.txt
             #else
                 --gff_file mapping.gff
@@ -37,24 +37,33 @@ Rscript '${__tool_directory__}/tximport.R'
         #end if
     #end if
     --countsFromAbundance $countsFromAbundance 
-    #set $filename_to_element_identifiers = {}
     #set $count_files = list()
     #for $file in $countsFile:
-        $count_files.append(str($file))
-        $filename_to_element_identifiers.__setitem__(os.path.basename(str($file)),  $file.element_identifier)
+        #set $filename_to_element_identifiers = {}
+        $filename_to_element_identifiers.__setitem__('id',str($file.element_identifier))
+        $filename_to_element_identifiers.__setitem__('path',str($file))
+        $count_files.append(filename_to_element_identifiers)
     #end for
-    --countsFiles '${filename_to_element_identifiers}'
+    #set $samples_dict = {}
+    $samples_dict.__setitem__('samples',$count_files)
+    --countsFiles '#echo json.dumps(samples_dict)#'
     --out_file '${gene_level_values}' 
 
-       
-  ]]>
-  </command>
-  <requirements>
+]]></command>
+    <requirements>
 	<requirement type="package">bioconductor-tximport</requirement> 
 	<requirement type="package" version="1.34.1">bioconductor-genomicfeatures</requirement>
         <requirement type="package" version="1.20.2">r-getopt</requirement>
-  </requirements>
-  <inputs>
+        <requirement type="package" version="0.2.20">r-rjson</requirement>
+    </requirements>
+    <stdio>
+        <exit_code range="1:" level="error" description="Error code returned" />
+        <regex match="is not TRUE"
+           source="both"
+           level="fatal"
+           description="Execution halted." />
+    </stdio>   
+    <inputs>
     <conditional name="inputSourceOptions">
         <param name="inputSource" type ="select" label="Select the source of the quantification file"> 
             <option value="none">Custom format (specify the columns)</option>

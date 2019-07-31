@@ -12,7 +12,6 @@ args <- commandArgs(trailingOnly = TRUE)
 # get options, using the spec as defined by the enclosed list.
 # we read the options from the default: commandArgs(TRUE).
 spec <- matrix(c(
-  "quiet", "q", 0, "logical",
   "help", "h", 0, "logical",
   "base_dir", "w", 1, "character",
   "out_file", "o", 1, "character",
@@ -23,14 +22,16 @@ spec <- matrix(c(
   "tx2gene", "f", 0, "character",
   "geneIdCol", "l", 0, "character",
   "txIdCol" , "p", 1, "character",
-  "abundanceColt", "i", 0, "logical",
+  "abundanceCol", "i", 0, "logical",
   "countsCol", "y", 1, "character",
   "lengthCol", "x", 1, "character"),
   byrow=TRUE, ncol=4)
 
 opt <- getopt(spec)
 
-countsFiles
+
+
+
 
 # if help was asked for print a friendly message
 # and exit with a non-zero error code
@@ -39,43 +40,70 @@ if (!is.null(opt$help)) {
   q(status=1)
 }
 	
+if (is.null(opt$gff_file) & is.null(opt$tx2gene)) {
+  cat("A GFF/GTF file or a tx2gene table is required\n")
+  q(status=1)
+}
+
+if (opt$format == 'none'){  #custom format
+    if (is.null(opt$txIdCol) | is.null(opt$geneIdCol) | is.null(opt$abundanceCol) | is.null(opt$countsCol) | is.null(opt$countsCol) | is.null(opt$lengthCol)) {
+        cat("If you select a custom format for the input files you need to specify the column names\n")
+        q(status=1)
+   }
+}
+
+if (is.null(opt$countsFiles)) {
+  cat("'countsFiles' is required\n")
+  q(status=1)
+}
+
+## parse counts files
+library(rjson)
+dat <- fromJSON(opt$countsFiles)
+samples_df <- lapply(dat, function(samples) # Loop through each "sample"
+{
+  # Convert each group to a data frame.
+  # This assumes you have 6 elements each time
+  data.frame(matrix(unlist(samples), ncol=2, byrow=T))
+})
+samples_df <- do.call(rbind, samples_df)
+colnames(samples_df) <- c("path","id")
+rownames(samples_df) <- NULL
+
+# Prepare char vector with files and sample names 
+files <- file.path(samples_df[,"path"])
+names(files) <- samples_df[,"id"]
+files
+all(file.exists(files))
 
 
 
 library(tximport)
-args = commandArgs(trailingOnly=TRUE)
-#length(args)
-#if (length(args) < 3) {
-#  stop("At least 3 arguments must be supplied: gene2tx-Table, output-File, (samples)xN", call.=FALSE)
-#}
 
 
 
 
 ### if the input is a gff/gtf file first need to create the tx2gene table
-if (!is.null(gff_file)) {
+if (!is.null(opt$gff_file)) {
     suppressPackageStartupMessages({
         library("GenomicFeatures")
     })
-    txdb <- makeTxDbFromGFF(gff_file)
+    txdb <- makeTxDbFromGFF(opt$gff_file)
     k <- keys(txdb, keytype = "TXNAME")
     tx2gene <- select(txdb, keys=k, columns="GENEID", keytype="TXNAME")
     # Remove 'transcript:' from transcript IDs (when gffFile is a GFF3 from Ensembl and the transcript does not have a Name)
     tx2gene$TXNAME <- sub('^transcript:', '', tx2gene$TXNAME)
 
-} else if (!is.null(tx2gene)){
-    tx2gene_table <- read.table(tx2gene,header=FALSE)
+} else {
+        tx2gene <- read.table(opt$tx2gene,header=FALSE)
+    }
 
-# parse sample list
-samples <- character()
-for (v in 3:length(countsFiles))
-  samples <- c(samples, args[v])
-
-names(samples) <- paste0("sample", 1:(length(args)-2))
-names(tx2gene) <- c('tx','gene')
-out <- tximport(samples, type="salmon", tx2gene=tx2gene)
+##
+if (opt$format == 'none'){  #predefined format
+    txi_out <- tximport(files, type="none",geneIdCol=opt$geneIdCol,txIdCol=opt$txIdCol,abundanceCol=opt$abundanceCol,countsCol=opt$countsCol,lengthCol=opt$lengthCol, tx2gene=tx2gene,countsFromAbundance=opt$countsFromAbundance)
+} else {
+    txi_out <- tximport(files, type=opt$format, tx2gene=tx2gene,countsFromAbundance=opt$countsFromAbundance)
+}
 
 # write count as table
-write.table(out$counts, file=out_file, row.names = TRUE, col.names = FALSE, quote = FALSE, sep = "\t")
-
-
+write.table(txi_out$counts, file=opt$out_file, row.names = TRUE, col.names = TRUE, quote = FALSE, sep = "\t")
