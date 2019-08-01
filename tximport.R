@@ -18,7 +18,7 @@ spec <- matrix(c(
   "countsFiles", "n", 1, "character",
   "countsFromAbundance", "r", 1, "character",
   "format", "v", 1, "character",
-  "gff_file", "H", 0, "logical",
+  "gff_file", "H", 0, "character",
   "tx2gene", "f", 0, "character",
   "geneIdCol", "l", 0, "character",
   "txIdCol" , "p", 1, "character",
@@ -28,7 +28,6 @@ spec <- matrix(c(
   byrow=TRUE, ncol=4)
 
 opt <- getopt(spec)
-
 
 
 
@@ -73,8 +72,8 @@ rownames(samples_df) <- NULL
 # Prepare char vector with files and sample names 
 files <- file.path(samples_df[,"path"])
 names(files) <- samples_df[,"id"]
-files
-all(file.exists(files))
+#files
+#all(file.exists(files))
 
 
 
