@@ -178,6 +178,21 @@ Rscript '${__tool_directory__}/tximport.R'
                 </assert_contents>
             </output>
         </test>
+        <!-- Test using a cached tx2gene file from tx2gene table -->
+        <test>
+            <param name="inputSource" value="salmon"/>
+            <param name="geneNameSource" value="externalFile"/>
+            <param name="countsFromAbundance" value="no"/>
+            <param name="gff_source" value="built-in"/>
+            <param name="tx2gene" value="Ath_Araport11_subset"/>
+            <param name="countsFile" value="salmon_sample2.tab,salmon_sample1.tab" />
+            <output name="gene_level_values">
+                <assert_contents>
+                    <has_text_matching expression="salmon_sample2.tab\tsalmon_sample1.tab" />
+                    <has_text_matching expression="AT1G01010\t156\t156" />
+                </assert_contents>
+            </output>
+        </test>
 
     </tests>
     <help>
