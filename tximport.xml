@@ -1,49 +1,67 @@
 <tool name="tximport" id="tximport" version="0.1">
   <description> Summarize transcript-level estimates for gene-level analysis </description>
+  <requirements>
+    <requirement type="package">bioconductor-tximport</requirement>
+  </requirements>
   <command>
  <![CDATA[
-       #if $refGffSource.gff_source == "history":
-            python $__tool_directory__/tximport.py --base_dir $__tool_directory__ --gff_file $refGffSource.ownFile 
+       python $__tool_directory__/tximport.py --base_dir $__tool_directory__ 
+       #if $gene_name_source_selector.gene_name_source == "external_file":
+           #if $gff_source_selector.gff_source == "history":
+                 --gff_file $gff_source_selector.own_file 
+           #else:
+                --tx2gene $gff_source_selector.tx2gene.fields.path
+           #end if
        #else:
-            python $__tool_directory__/tximport.py --base_dir $__tool_directory__ --tx2gene $refGffSource.tx2gene.fields.path
-       #end if
+            --column_name $gene_name_source_selector.gene_name_column
+
+       --input_format $input_source_selector.input_source
+       #if $input_source_selector.input_source == 'none':
+           --tx_id_col $input_source_selector.tx_id_col
+           --abundance_col $input_source_selector.abundance_col
+           --counts_col $input_source_selector.counts_col
+           --length_col $input_source_selector.length_col
+ 
        --sample '${input_sample}'       
        --out_file '${gene_level_values}' 
 
        
   ]]>
   </command>
-  <requirements>
-    <requirement type="package">bioconductor-tximport</requirement> 
-  </requirements>
   <inputs>
-    <conditional name="inputSourceOptions">
-        <param name="inputSource" type ="select" label="Select the source of the quantification file"> 
-            <option value="none" selected="True">Custom format (specify the columns)</option>
-            <option value="salmon">Salmon</option>
+    <conditional name="input_source_selector">
+        <param name="input_source" type ="select" label="Select the source of the quantification file"> 
+            <option value="salmon" selected="True">Salmon</option>
             <option value="sailfish">Sailfish</option>
             <option value="alevin">Alevin</option>
             <option value="kallisto">Kallisto</option>
             <option value="rsem">RSEM</option>
             <option value="stringtie">Stringtie</option>
+            <option value="none">Custom format (specify the columns)</option>
         </param>
         <when value="none"> 
-            <param name="txIdCol" type="text" label="Name of the txID columns">
-            <param name="abundanceCol" type="text" label="Name of the abundance column">
-            <param name="countsCol" type="text" label="Name of the counts column">
-            <param name="lengthCol" type="text" label="Name of the length column">
+            <param name="tx_id_col" type="text" label="Name of the txID columns"/>
+            <param name="abundance_col" type="text" label="Name of the abundance column"/>
+            <param name="counts_col" type="text" label="Name of the counts column"/>
+            <param name="length_col" type="text" label="Name of the length column"/>
         </when>
+        <when value="salmon"/>
+        <when value="sailfish"/>
+        <when value="alevin"/>
+        <when value="kallisto"/>
+        <when value="rsem"/>
+        <when value="stringtie"/>
     </conditional> 
-    <conditional name="geneNameSourceOptions" >
+    <conditional name="gene_name_source_selector" >
         <param name="geneNameSource" type="select" label="Is the gene name part of the counts file or will be obtained from an external file?">
-            <option value="externalFile" selected="True">Use an external file to map transcript to gene names</option>
-            <option value="geneNameColumnOption">Gene name is a column of the input file</option>
+            <option value="external_file" selected="True">Use an external file to map transcript to gene names</option>
+            <option value="gene_name_column_option">Gene name is a column of the input file</option>
         </param>
-        <when value="geneNameColumnOption"> 
-            <param name="geneIdCol" type="text" label="Name of the column containing the geneID">
+        <when value="gene_name_column_option"> 
+            <param name="gene_name_column" type="text" label="Name of the column containing the geneID"/>
         </when>
-        <when value="externalFile">
-            <conditional name="refGffSource">
+        <when value="external_file">
+            <conditional name="gff_source_selector">
                 <param name="gff_source" type="select" label="Select a GFF from your history or use a built-in file?">
                     <option value="built-in" selected="True">Use a built-in file</option>
                     <option value="history" >Use one from the history</option>
@@ -57,9 +75,10 @@
                     </param>
                 </when>  
                 <when value="history">  <!-- SHOULD ADD OPTIONS TO SELECT THE INPUT TO BE THE TX2GENE TABLE OR A GFF -->
-                    <param name="ownFile" type="data" format="gff" metadata_name="dbkey" label="Select your GFF file"  />
+                    <param name="own_file" type="data" format="gff" label="Select your GFF file"  />
                 </when>
             </conditional>
+        </when>    
     </conditional>
     <param name="input_sample" format="tabular" type="data" label="Input sample" help="Salmon output *.quant file" />
 
@@ -70,18 +89,24 @@
     <param name="out_mode" type="boolean" truevalue='merge' falsevalue='individual' checked="false" label="Merge output into one file with multiple columns" help=""/>
  -->
   </inputs>
-  <outputs>
-   <data format="tabular" name="gene_level_values" label="Gene level summarization on ${on_string}"/>
-   <!--     <collection name="gene_level_values" type="list" label="${input_samples}_gene_level_sum" structured_like="input_samples" inherit_format="true"/>
-   <data format="tabular" name="gene_level_values" label="input_samples2${input_samples.index(0)}.input_file" />
-   <data format="tabular" name="gene_level_values_2" label="GENE_LEVEL_2.csv" >
-    </data>
-   <data format="tabular" name="gene_level_values_3" label="GENE_LEVEL_3.csv" >
-       <filter> len(input_samples) > 2</filter>
-    </data>
-      
--->
-   </outputs>
+
+
+    <outputs>
+    <data format="tabular" name="gene_level_values" label="Gene level summarization on ${on_string}"/>
+    </outputs>
+
+
+    <tests>
+        <test expect_num_outputs="2">
+            <param name="input_source" value="salmon" />
+            <param name="input_source_selector" value="history" />
+            <param name="gff_source" value="standard" />
+            <param name="gff_cache" value="sacCer2" />
+            <output name="counts" file="htseq-test_counts.tsv" />
+            <output name="othercounts" file="htseq-test_othercounts.tsv" />
+        </test>
+
+    </tests> 
   <help>
 
 .. class:: infomark

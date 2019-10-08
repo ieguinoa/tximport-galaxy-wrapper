@@ -28,6 +28,14 @@ def main():
     parser = optparse.OptionParser()
     parser.add_option('-s', '--sample', action='append', dest='samples_list',   help='Add repeated values to a list' )
     parser.add_option( '-o', '--out_file', dest='out_file', action='store', type="string", default=None )
+    parser.add_option( '-i', '--input_format', dest='input_format', action='store', type="string", default=None )  
+              # if none then there should also be parameters for:
+    #            <param name="tx_id_col" type="text" label="Name of the txID columns"/>
+    #            <param name="abundance_col" type="text" label="Name of the abundance column"/>
+    #            <param name="counts_col" type="text" label="Name of the counts column"/>
+    #            <param name="length_col" type="text" label="Name of the length column"/>
+
+    parser.add_option( '-c', '--col_name', dest='col_name', action='store', type="string", default=None )
     parser.add_option( '-f', '--gff_file', dest='gff_file', action='store', type="string", default=None )
     parser.add_option( '-p', '--base_dir', dest='base_dir', action='store', type="string", default=None )
     parser.add_option( '-t', '--tx2gene', dest='tx2gene_table', action='store', type="string", default=None )
