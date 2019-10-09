@@ -219,5 +219,10 @@ Rscript '${__tool_directory__}/tximport.R'
 Current version only works in 'merge' mode: A single table of gene summarizations is generated with one column for each sample file.
 Take into account that DEseq2 package in Galaxy requires one table per sample. 
     </help>
+    
+    <citations>
+        <citation type="doi">doi:10.18129/B9.bioc.tximport</citation>
+    </citations>
+
 </tool>
 
