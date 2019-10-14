@@ -111,7 +111,7 @@ Rscript '${__tool_directory__}/tximport.R'
                 </param>
                 <when value="built-in">
                     <param name="tx2gene" type="select" label="Select an annotation version" help="If the build of your interest is not listed contact your Galaxy admin">
-                        <options from_data_table="tx2gene_table">
+                        <options from_data_table="tx2gene">
                             <filter type="sort_by" column="1"/>
                             <validator type="no_options" message="No files are available for the selected input dataset"/>
                         </options>
