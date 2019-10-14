@@ -22,7 +22,7 @@ spec <- matrix(c(
   "tx2gene", "f", 0, "character",
   "geneIdCol", "l", 0, "character",
   "txIdCol" , "p", 1, "character",
-  "abundanceCol", "i", 0, "logical",
+  "abundanceCol", "i", 0, "character",
   "countsCol", "y", 1, "character",
   "lengthCol", "x", 1, "character"),
   byrow=TRUE, ncol=4)
@@ -45,7 +45,7 @@ if (is.null(opt$gff_file) & is.null(opt$tx2gene)) {
 }
 
 if (opt$format == 'none'){  #custom format
-    if (is.null(opt$txIdCol) | is.null(opt$geneIdCol) | is.null(opt$abundanceCol) | is.null(opt$countsCol) | is.null(opt$countsCol) | is.null(opt$lengthCol)) {
+    if (is.null(opt$txIdCol) | is.null(opt$abundanceCol) | is.null(opt$countsCol) | is.null(opt$lengthCol)) {
         cat("If you select a custom format for the input files you need to specify the column names\n")
         q(status=1)
    }
@@ -97,12 +97,23 @@ if (!is.null(opt$gff_file)) {
         tx2gene <- read.table(opt$tx2gene,header=FALSE)
     }
 
-##
-if (opt$format == 'none'){  #predefined format
-    txi_out <- tximport(files, type="none",geneIdCol=opt$geneIdCol,txIdCol=opt$txIdCol,abundanceCol=opt$abundanceCol,countsCol=opt$countsCol,lengthCol=opt$lengthCol, tx2gene=tx2gene,countsFromAbundance=opt$countsFromAbundance)
-} else {
-    txi_out <- tximport(files, type=opt$format, tx2gene=tx2gene,countsFromAbundance=opt$countsFromAbundance)
-}
 
+
+##
+if (is.null(opt$geneIdCol)) { ## there is a tx2gene table
+    if (opt$format == 'none'){  #predefined format 
+        cat("here i am too\n")  
+        txi_out <- tximport(files, type="none",txIdCol=opt$txIdCol,abundanceCol=opt$abundanceCol,countsCol=opt$countsCol,lengthCol=opt$lengthCol,tx2gene=tx2gene,countsFromAbundance=opt$countsFromAbundance)
+    } else {
+        txi_out <- tximport(files, type=opt$format, tx2gene=tx2gene,countsFromAbundance=opt$countsFromAbundance)
+    }
+} else {  # the gene_ID is a column in the counts table
+    if (opt$format == 'none'){  #predefined format
+        txi_out <- tximport(files, type="none",geneIdCol=opt$geneIdCol,txIdCol=opt$txIdCol,abundanceCol=opt$abundanceCol,countsCol=opt$countsCol,lengthCol=opt$lengthCol,tx2gene=tx2gene,countsFromAbundance=opt$countsFromAbundance)
+    } else {
+        txi_out <- tximport(files, type=opt$format, geneIdCol=opt$geneIdCol,countsFromAbundance=opt$countsFromAbundance)
+    }
+
+}
 # write count as table
 write.table(txi_out$counts, file=opt$out_file, row.names = TRUE, col.names = TRUE, quote = FALSE, sep = "\t")
